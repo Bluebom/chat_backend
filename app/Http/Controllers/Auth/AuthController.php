@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Auth;
 
 
-use App\Http\Requests\Auth\AuthRequest;
+use App\Http\Requests\AuthUser\AuthLoginRequest;
+use App\Http\Requests\AuthUser\AuthRegisterRequest;
 use App\Models\User;
+use Illuminate\Contracts\Auth\Guard;
+use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\NewAccessToken;
 
 /**
@@ -18,6 +22,15 @@ use Laravel\Sanctum\NewAccessToken;
  */
 class AuthController
 {
+    /**
+     * @var Guard|StatefulGuard
+     */
+    private $auth;
+
+    public function __construct()
+    {
+        $this->auth = Auth::guard('web');
+    }
 
     /**
      * Estrutura para criação e edição de usuário.
@@ -35,15 +48,15 @@ class AuthController
     }
 
     /**
-     * Registro do usuário
+     * Registro do usuário.
      *
-     * @param AuthRequest $request
+     * @param AuthRegisterRequest $request
      * @return Application|ResponseFactory|Response
      */
-    public function register(AuthRequest $request)
+    public function register(AuthRegisterRequest $request)
     {
-        /** @var \App\Models\User $user Guarda as informações do usuário recém-criado.  */
-        $user = User::create($request->all());
+        /** @var User $user Guarda as informações do usuário recém-criado.  */
+        $user = User::create($this->structure($request->all()));
 
         /** @var NewAccessToken $token Guarda o token de sessão desse usuário. */
         $token = $user->createToken('main')->plainTextToken;
@@ -51,5 +64,25 @@ class AuthController
         return response(['user' => $user, 'token' => $token]);
     }
 
+    /**
+     * Acesso do usuário.
+     *
+     * @param AuthLoginRequest $request
+     * @return Application|ResponseFactory|Response
+     */
+    public function login(AuthLoginRequest $request)
+    {
+        if(!$this->auth->attempt($request->all(), false))
+            return response([
+                'error' => 'Dados de usuário e/ou senha incorretos.'
+            ], 422);
+
+        /** @var User $user Instância de user */
+        $user = $this->auth->user();
+
+        $token = $user->createToken('main')->plainTextToken;
+
+        return response(['user' => $user, 'token' => $token]);
+    }
 
 }
