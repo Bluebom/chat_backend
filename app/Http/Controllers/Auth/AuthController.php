@@ -55,7 +55,7 @@ class AuthController
      */
     public function register(AuthRegisterRequest $request)
     {
-        /** @var User $user Guarda as informações do usuário recém-criado.  */
+        /** @var User $user Guarda as informações do usuário recém-criado. */
         $user = User::create($this->structure($request->all()));
 
         /** @var NewAccessToken $token Guarda o token de sessão desse usuário. */
@@ -72,7 +72,7 @@ class AuthController
      */
     public function login(AuthLoginRequest $request)
     {
-        if(!$this->auth->attempt($request->all(), false))
+        if (!$this->auth->attempt($request->all(), false))
             return response([
                 'error' => 'Dados de usuário e/ou senha incorretos.'
             ], 422);
@@ -83,6 +83,19 @@ class AuthController
         $token = $user->createToken('main')->plainTextToken;
 
         return response(['user' => $user, 'token' => $token]);
+    }
+
+    /**
+     * Invalida token de acesso ao sistema.
+     *
+     * @return Application|ResponseFactory|Response
+     */
+    public function loggout()
+    {
+        if(Auth::user()->currentAccessToken()->delete)
+            $status = true;
+
+        return response(['status' => $status??false]);
     }
 
 }
